@@ -1,6 +1,5 @@
-####################################################################################################
-################现在是基于数字图像处理系统写的人脸实时表情识别系统 By阮炜霖 2020101603###################
-####################################################################################################
+
+#RWLinno's Integrated Visual-data Processing System
 import math
 import os.path
 import sys
@@ -21,21 +20,19 @@ import camera
 import re
 import json
 import jsonpath
-
+import tips
+import Transform
 
 # 记录图片路径的前驱后继
 pre = dict()
 nxt = dict()
-####################################################################################################
-#界面部分
-####################################################################################################
 
 class Window(QWidget):
 # 初始化页面
 	def __init__(self):
 		super().__init__()
 		self.lst_oper = "null" # 记录最后一个操作名称
-		self.setWindowTitle('Visual-Data综合处理系统 By阮炜霖')
+		self.setWindowTitle(tips.title)
 		self.resize(1200,900)
 
 		# 定义字体
@@ -320,14 +317,6 @@ class Window(QWidget):
 					return False
 			return True
 
-	# 预览图片函数
-		def show(img):
-			if img.ndim == 2:
-				plt.imshow(img, cmap='gray')
-			else:  #如果是三维的就要转化为RGB再调用
-				plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-			plt.show()
-
 	# 获取时间编号
 		def rwl_time():
 			t = time.localtime() #获取时间然后将年月日时分秒连起来
@@ -399,9 +388,8 @@ class Window(QWidget):
 
 	#预览图片
 		def rwl_view():
-			show(self.now_pic)
-			#cv2.imshow('thresh', self.now_pic)
-			#cv2.waitKey(0)
+			plt.imshow(cv2.cvtColor(self.now_pic, cv2.COLOR_BGR2RGB))
+			plt.show()
 		btn_view.clicked.connect(rwl_view)
 
 		def gets_json(obj,name):
@@ -462,24 +450,20 @@ class Window(QWidget):
 		btn_real_time_emotion.clicked.connect(rwl_real_time_emotion)
 		
 		def rwl_video_emotion():
-			# 用控件获取视频路径
 			directory = QFileDialog.getOpenFileName(self,
 													"getOpenFileName", "./",
 													"All Files (*);;Text Files (*.txt)")
-			video_path = directory[0]
+			video_path = directory[0] 			# 用控件获取视频路径
 			video.Emotion_Recognition_video(video_path)
 			return
 		btn_video_emotion.clicked.connect(rwl_video_emotion)
+
 	#刷新图像
 		def rwl_refresh():
 			print(self.imgpath)
 			# 记录上一个操作和参数
 			s = self.lst_oper+" "+self.par1.text()+" "+self.par2.text()+" "+self.par3.text()+" "+self.par4.text()
 			self.ope.setText(s)
-			#self.par1.setText('')  # 重置参数框
-			#self.par2.setText('')
-			#self.par3.setText('')
-			#self.par4.setText('')
 			# 重新读取图片
 			self.pmap = QPixmap(self.imgpath)
 			self.now_pic = cv2.imread(self.imgpath,0)
@@ -502,10 +486,8 @@ class Window(QWidget):
 													"All Files (*);;Text Files (*.txt)")
 			self.imgpath = directory[0]
 			self.pmap = QPixmap(self.imgpath)
-			self.now_pic = cv2.imread(self.imgpath,0)
-			# 转为灰度图处理
-			if self.now_pic.ndim !=2 :
-				self.now_pic = cv2.cvtColor(self.now_pic,cv2.COLOR_RGB2GRAY)
+			self.now_pic = cv2.imread(self.imgpath)
+			#self.now_pic = cv2.cvtColor(self.now_pic,cv2.COLOR_BGR2RGB)
 			self.pic.setPixmap(self.pmap)
 			# 更新提示信息
 			s = "图片大小为:" + str(self.pmap.width()) + "x" + str(self.pmap.height()) + ",开始数字图像处理吧！"
@@ -520,7 +502,7 @@ class Window(QWidget):
 			y = 0
 			z = 0
 			if check([1,1,1,0])== False :
-				QMessageBox.information(self, '请确认参数', '请确认你的参数是否正确。\n[参数1]：灰度变换类型 type\n[参数2]：变换参数C\n[参数3]：变换参数Y\n当type=1时，将对图像进行反转；当type=2时，图像做对数变换S=C*log(1+r)；当type=3时，图像做伽马变换S=C*(r^Y)；其他情况下，图像做直方图均衡化处理。要求type,c,y都是整数。', QMessageBox.Ok)
+				QMessageBox.information(self, tips.GreyScale_error, QMessageBox.Ok)
 				return
 			if len(self.par1.text()) != 0:
 				x = int(self.par1.text())
@@ -550,10 +532,8 @@ class Window(QWidget):
 			else :
 				# res4 = Equalization(img) # 直方图均衡化
 				self.now_pic = res4
-			# show(np.hstack([img,res1,res2,res3,res4])) # 用来呈现实验结果
 			self.lst_oper = "grey"
 			rwl_save()
-			#rwl_refresh()
 			window.setCursor(Qt.ArrowCursor)
 			print("灰度变换成功！！！")
 		btn_GreyScale.clicked.connect(rwl_GreyScale)
@@ -562,7 +542,7 @@ class Window(QWidget):
 	# 调整画布
 		def rwl_resize():
 			if check([1,1,0,0])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：画布的宽度w\n[参数2]：画布的高度h\n画布裁剪为指定大小。如果参数为空或0时，画布会默认变为1200*800，w,h为整数', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Resize_error, QMessageBox.Ok)
 				return
 			x = 1200
 			y = 800
@@ -587,7 +567,7 @@ class Window(QWidget):
 			z = 0
 			w = 0
 			if check([1,1,1,1])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：图片的起始高度h1\n[参数2]：图片的终止高度h2\n[参数3]：图片的起始宽度w1\n[参数4]：图片的终止宽度w2\n将图片裁剪为指定的矩形。如果参数无效，h1,w1会默认为0，h2,w2会默认为图片的原始宽度和高度,h1,h2,w1,w2为整数。', QMessageBox.Ok)
+				QMessageBox.information(self,tips.Crop_error, QMessageBox.Ok)
 				return
 			if len(self.par1.text()) != 0 :
 				x = int(self.par1.text())
@@ -603,7 +583,6 @@ class Window(QWidget):
 					w = cols
 			res = self.now_pic[z:w,x:y] # 直接截取灰度矩阵的某一个区域
 			self.now_pic =res
-			# show(res)
 			self.lst_oper = "crop"
 			rwl_save()
 			#rwl_refresh()
@@ -613,7 +592,7 @@ class Window(QWidget):
 	# 拉伸图片
 		def rwl_picresize():
 			if check([1,1,0,0])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：图片的宽度w\n[参数2]：图片的高度h\n将图片拉伸到w*h。如果参数无效，w,h会默认为图片原始宽度和高度,w,h为整数。\n', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Picresize_error, QMessageBox.Ok)
 				return
 			rows , cols = self.now_pic.shape
 			if len(self.par1.text()) != 0 :
@@ -659,7 +638,6 @@ class Window(QWidget):
 
 			res = rwl_WarpAffine(self.now_pic, M, (cols, rows))  # 用仿射变换实现平移
 			self.now_pic = res
-		#	show(res)
 			self.lst_oper = "translation"
 			rwl_save()
 			#rwl_refresh()
@@ -671,7 +649,7 @@ class Window(QWidget):
 	# 错切图片
 		def rwl_shear():
 			if check([2,2,0,0])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：向x轴错切的比率rx \n[参数2]：向y轴错切的比率ry\n将图片错切[rx,ry]，如果参数无效，默认为0，rx,rt为0~1范围内的浮点数。\n', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Shear_error, QMessageBox.Ok)
 				return
 			rows, cols = self.now_pic.shape[:2]
 			if len(self.par1.text()) != 0 :
@@ -686,17 +664,15 @@ class Window(QWidget):
 			window.setCursor(Qt.WaitCursor)
 			res = rwl_WarpAffine(self.now_pic,M,(cols,rows))
 			self.now_pic = res
-		#	show(res)
 			self.lst_oper = "shear"
 			rwl_save()
-			#rwl_refresh()
 			window.setCursor(Qt.ArrowCursor)
 			print("错切成功!!!")
 		btn_shear.clicked.connect(rwl_shear)
 	# 翻转图片
 		def rwl_flip():
 			if check([5,5,0,0])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：是否水平翻转标识f1[参数2]：是否垂直翻转标识f2\n如果f1为1时，图片会进行水平翻转；如果f2为1时，图片会进行垂直翻转。如果参数无效，图片不做变换,f1,f2范围为0或1。\n', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Flip_error, QMessageBox.Ok)
 				return
 			rows, cols = self.now_pic.shape[:2]
 			x = 0
@@ -722,10 +698,8 @@ class Window(QWidget):
 					[0, -1, rows]
 				], dtype=np.float32)
 				res = rwl_WarpAffine(res, M, (cols, rows))
-		#	show(res)
 			self.now_pic = res
 			rwl_save()
-			#rwl_refresh()
 			self.lst_oper = "flip"
 			window.setCursor(Qt.ArrowCursor)
 			print(x,y,"翻转成功!!!")
@@ -734,7 +708,7 @@ class Window(QWidget):
 	# 旋转图片
 		def rwl_rotate():
 			if check([4,1,1,0])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：旋转角度 beta\n[参数2]：旋转后原点对应x坐标\n[参数3]：旋转后原点对应y坐标\n将图片按照beta进行逆时针旋转，beta为范围[0~360]的浮点数。\n', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Rotate_error, QMessageBox.Ok)
 				return
 			img = self.now_pic
 			rows, cols = img.shape[:2]
@@ -756,7 +730,6 @@ class Window(QWidget):
 			],dtype=np.float32)
 			M2 = cv2.getRotationMatrix2D((rows // 2, cols // 2), rt, 1)  #这是绕中心旋转
 			res = rwl_WarpAffine(img,M,(cols,rows))
-		#	show(res)
 			self.now_pic = res
 			self.lst_oper = "rotate"
 			rwl_save()
@@ -768,22 +741,13 @@ class Window(QWidget):
 	# 透视变换
 		def rwl_PerspectiveTransform():
 			if check([3,3,3,3])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：矩形左上角坐标x1,y1\n[参数2]：矩形右上角坐标x2,y2\n[参数3]：矩形右下角坐标x3,y3\n[参数4]：矩形左下角坐标x4,y4\n将图片中的四个点(x1,y1),(x2,y2),(x3,y3),(x4,y4)以透视变换转化到整个图像区域。\n每个参数以一个半角逗号隔开两个整数。如果参数格式填写有误，可能导致程序无法运行。\n', QMessageBox.Ok)
+				QMessageBox.information(self, '透视变换', tips.PerspectiveTransform_error, QMessageBox.Ok)
 				return
 			img = self.now_pic
 			h, w = img.shape[:2]
-			x1, y1 = self.par1.text().split(',')  # 左上角坐标
-			x2, y2 = self.par2.text().split(',')  # 右上角坐标
-			x3, y3 = self.par3.text().split(',')  # 右下角坐标
-			x4, y4 = self.par4.text().split(',')  # 左下角坐标
-			x1 = int(x1)
-			x2 = int(x2)
-			x3 = int(x3)
-			x4 = int(x4)
-			y1 = int(y1)
-			y2 = int(y2)
-			y3 = int(y3)
-			y4 = int(y4)
+			x1, y1, x2, y2, x3, y3, x4, y4 = map(int, self.par1.text().split(',') + self.par2.text().split(',') +
+                                    self.par3.text().split(',') + self.par4.text().split(','))
+
 			window.setCursor(Qt.WaitCursor)
 			src = np.array([
 				[x1, y1],
@@ -797,10 +761,11 @@ class Window(QWidget):
 				[h, w],
 				[h, 0]
 			], dtype=np.float32)
-			M = cv2.getPerspectiveTransform(src, dst) # 这部分不会复现
-			res = cv2.warpPerspective(img, M, (w, h))  # 用cv2的库实现透视变化
+			M = Transform.getPerspectiveTransform(src, dst)
+			#res = Transform.warpPerspective(img, M, (w, h)) #这里不会实现
+			#M = cv2.getPerspectiveTransform(src, dst)
+			res = cv2.warpPerspective(img, M, (w, h))
 			self.now_pic = res
-		#	show(res)
 			self.lst_oper = "PerspectiveTransform"
 			rwl_save()
 			# rwl_refresh()
@@ -812,7 +777,7 @@ class Window(QWidget):
 	# 四则运算部分
 		def rwl_LinearTransformation():
 			if check([1,1,2,2])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：图片灰度加值x\n[参数2]：图片灰度减值y\n[参数3]：图片灰度乘以系数z\n[参数4]：图片灰度除以系数w\n按参数编号为顺序，依次对图片进行加减乘除操作。如果参数为0，则会跳过操作。\nx,y为[-255,255]的整数，z,w为[0,1]范围内的浮点数。', QMessageBox.Ok)
+				QMessageBox.information(self, '线性变换', tips.LinearTransformation_error , QMessageBox.Ok)
 				return
 			window.setCursor(Qt.WaitCursor)
 			if len(self.par1.text()) != 0:
@@ -831,7 +796,6 @@ class Window(QWidget):
 				if float(self.par4.text())!=0 :
 					self.now_pic = self.now_pic / float(self.par4.text())
 			img_div = self.now_pic
-		#	show(np.hstack([img_add, img_sub, img_mul, img_div]))
 			self.lst_oper = "LinearTransformation"
 			rwl_save()
 			window.setCursor(Qt.ArrowCursor)
@@ -842,7 +806,7 @@ class Window(QWidget):
 	# 图片叠加部分
 		def rwl_fusion():
 			if check([2,2,0,0])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：当前图片img的权值w1\n[参数2]：所融合图片obj的权值w2\n将融合两张图片，并返回一个新的图片res=img*w1+obj*w2，w1,w2为[0,1]范围内的浮点数。', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Fusion_error, QMessageBox.Ok)
 				return
 			# 打开一张新的图片
 			directory = QFileDialog.getOpenFileName(self,
@@ -852,8 +816,8 @@ class Window(QWidget):
 			path = directory[0]
 			obj = cv2.imread(path,0)
 			# 先将图片转成灰度图
-			if obj.ndim != 2 :
-				obj = cv2.cvtColor(obj, cv2.COLOR_RGB2GRAY)
+			#if obj.ndim != 2 :
+			#	obj = cv2.cvtColor(obj, cv2.COLOR_BGR2RGB)
 			h, w = img.shape[:2]
 			x = 0
 			y = 0
@@ -871,22 +835,18 @@ class Window(QWidget):
 				obj = obj * y
 			# 调成一样的大小
 			obj.resize(h, w)
-			# print(img + obj)
-			# 按比例合成
 			res = (img + obj)
-		#	show(res)
 			self.now_pic = res
 			self.lst_oper = "fusion"
 			rwl_save()
 			window.setCursor(Qt.ArrowCursor)
-			# rwl_refresh()
 			print("图片融合成功!!!")
 		btn_fusion.clicked.connect(rwl_fusion)
 
 	# 阈值分割部分
 		def rwl_threshold():
 			if check([2,5,0,0])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：二值化系数y\n[参数2]：分割方式x\n当分割方式x=1时，将使用大津法获得图片阈值，否则用迭代法获得图片阈值。\n系数y越大时，二值化效果越明显。x范围为[0/1],系数y为[0,1]范围内的浮点数。', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Threshold_error, QMessageBox.Ok)
 				return
 			x = 0
 			y = 0
@@ -902,7 +862,6 @@ class Window(QWidget):
 				self.now_pic = res1
 			else :
 				self.now_pic = res2
-		#	show(np.hstack([img,res1,res2]))
 			self.lst_oper = "threshold"
 			rwl_save()
 			# rwl_refresh()
@@ -913,7 +872,7 @@ class Window(QWidget):
 	# 边缘检测
 		def rwl_EdgeDetection():
 			if check([1,0,0,0])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：边缘检测方式type\n当type=1时，使用Sobel算子对图像进行边缘检测。\n当type=2时，使用Robert算子对图像进行边缘检测。\n其他情况下，使用Laplace算子对图像进行边缘检测。', QMessageBox.Ok)
+				QMessageBox.information(self, tips.EdgeDetection_error, QMessageBox.Ok)
 				return
 			x = 3
 			window.setCursor(Qt.WaitCursor) # 设置等待光标
@@ -924,14 +883,12 @@ class Window(QWidget):
 			res1 = Sobel(img) # 使用Sobel算子实现
 			res2 = Robert(img) # 使用Robert算子实现
 			res3 = Laplace(img) # 使用Laplace算子实现
-			# show(np.hstack([res1,res2,res3]))
 			if x == 1:
 				self.now_pic = res1
 			elif x == 2:
 				self.now_pic = res2
 			else:
 				self.now_pic = res3
-			show(np.hstack([img,res1,res2,res3]))
 			self.lst_oper = "EdgeDetection"
 			rwl_save()
 			#rwl_refresh()
@@ -942,7 +899,7 @@ class Window(QWidget):
 	# 中值滤波部分
 		def rwl_medianblur():
 			if check([1,0,0,0])== False :
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：卷积核的大小n\n使用n*n的卷积核对图像进行中值滤波处理。n的尽量定义在[3~10]之间', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Medianblur_error, QMessageBox.Ok)
 				return
 			img = self.now_pic
 			h, w = img.shape[:2]
@@ -953,7 +910,6 @@ class Window(QWidget):
 				if x < 3:
 					x = 5
 			res= MedianBlur(img,x)
-		#	show(res)
 			self.now_pic = res[0:w - x, 0:h - x]
 			self.lst_oper = "medianblur"
 			rwl_save()
@@ -964,7 +920,7 @@ class Window(QWidget):
 	# 均值滤波部分
 		def rwl_meanblur():
 			if check([1, 0, 0, 0]) == False:
-				self.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：卷积核的大小n\n使用n*n的卷积核对图像进行均值滤波处理。n的尽量定义在[3~10]之间\n', QMessageBox.Ok)
+				self.information(self, tips.MeanBlur_error, QMessageBox.Ok)
 				return
 			img = self.now_pic
 			h, w = img.shape[:2]
@@ -975,7 +931,6 @@ class Window(QWidget):
 				if x < 3:
 					x = 3
 			res = MeanBlur(img, x)
-		#	show(res)
 			self.now_pic = res[0:w - x, 0:h - x]
 			self.lst_oper = "meanblur"
 			rwl_save()
@@ -986,7 +941,7 @@ class Window(QWidget):
 	# 双边滤波部分
 		def rwl_bilateral():
 			if check([1, 1, 1, 0]) == False:
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：空间距离滤波器的方差S\n[参数2]：灰度差异滤波器的方差C\n[参数3]：卷积核的大小n\n对图像进行双边滤波处理。n的尽量定义在[3~10]之间\n', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Bilateral_error, QMessageBox.Ok)
 				return
 			img = self.now_pic
 			h, w =img.shape[:2]
@@ -1001,7 +956,6 @@ class Window(QWidget):
 			if len(self.par3.text()) != 0 :
 				z = int(self.par3.text())
 			res = Bilateral(img,x,y,z)
-		#	show(res)
 			self.now_pic = res[0:w-z, 0:h-z]
 			self.lst_oper = "bilateral"
 			rwl_save()
@@ -1012,7 +966,7 @@ class Window(QWidget):
 	# 高斯模糊
 		def rwl_gauss():
 			if check([5, 1, 0, 0]) == False:
-				QMessageBox.information(self, '请确认参数', '无效操作！！！请确认你的参数是否正确。\n[参数1]：力度x\n[参数2]：卷积核的大小n\n对图像进行高斯模糊处理。x为浮点数，n的尽量定义在[3~10]之间\n', QMessageBox.Ok)
+				QMessageBox.information(self, tips.Gauss_error, QMessageBox.Ok)
 				return
 			img = self.now_pic
 			h, w = img.shape[:2]
@@ -1028,7 +982,6 @@ class Window(QWidget):
 				if y<3 :
 					y = 3
 			res = gauss(img,y,x)
-		#	show(res)
 			self.now_pic = res[0:w - (2*y+1), 0:h - (2*y+1)]
 			self.lst_oper = "gauss"
 			rwl_save()
@@ -1296,13 +1249,9 @@ class Window(QWidget):
 						H[y, x] = 1
 			return H
 
-####################################################################################################
-#封装完毕
-####################################################################################################
-
+#程序入口
 if __name__ == '__main__':
 	app = QApplication(sys.argv)
 	window = Window()
 	window.show()
 	sys.exit(app.exec_())
- 
